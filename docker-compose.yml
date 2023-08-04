@@ -13,7 +13,6 @@ services:
       - .env
     volumes:
       - ./code:/home/app/code
-      - python-packages:/home/app/.local/share
     working_dir: /home/app/code
     command: tail -f > /dev/null
 volumes:
