@@ -16,7 +16,7 @@ def main():
 
     now = datetime.now(tz=pytz.timezone('Asia/Tokyo'))
     retriever = NaturePhotonicsRetriever()
-    recent_entries = retriever.fetch_recent_entries(now, hours_ago=240)
+    recent_entries = retriever.fetch_recent_entries(now, hours_ago=24)
 
     sender = DiscordSender(discord_url)
     for entry in recent_entries:
