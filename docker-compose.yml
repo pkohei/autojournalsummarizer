@@ -3,7 +3,7 @@ services:
   journalgpt:
     build:
       context: .
-      dockerfile: ./Dockerfile.dev
+      dockerfile: ./Dockerfile
       args:
         UID: 1000
         GID: 1000
