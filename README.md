@@ -17,7 +17,7 @@ DISCORD_URL={your-webhook-url}
 
 ```bash
 docker compose build
-docker compose run --rm journalgpt pipenv run python main.py
+docker compose -f docker-compose.yml run --rm journalgpt python main.py
 ```
 
 定期的に実行したければcronなどを使ってください。頻度は常識の範囲内にしましょう。
