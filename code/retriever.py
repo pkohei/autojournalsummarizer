@@ -1,3 +1,4 @@
+from abc import ABCMeta, abstractmethod
 from datetime import datetime, timedelta
 from time import mktime
 
@@ -7,15 +8,37 @@ import requests
 from bs4 import BeautifulSoup
 
 
-class NaturePhotonicsRetriever:
-    rss_url = 'https://www.nature.com/nphoton.rss'
+class JournalRetriever(metaclass=ABCMeta):
+    RSS_URL = ""
 
     def fetch_recent_entries(self, now=None, hours_ago=24):
-        feed = feedparser.parse(self.rss_url)
+        feed = feedparser.parse(self.RSS_URL)
         entries = feed.entries
         recent_entries = retrieve_recent_entries(
             entries, now=now, hours_ago=hours_ago)
-        return recent_entries
+
+        formed_recent_entries = []
+        for entry in recent_entries:
+            abst = self.extract_abstract(entry)
+            formed_recent_entries.append({
+                'title': entry.title,
+                'authors': ', '.join([author.name for author in entry.authors]),
+                'updated_date': entry.updated,
+                'link': entry.link,
+                'abstract': abst
+            })
+
+        formed_recent_entries.sort(key=lambda x: x['updated_date'])
+
+        return formed_recent_entries
+
+    @abstractmethod
+    def extract_abstract(self, entry):
+        return ""
+
+
+class NaturePhotonicsRetriever(JournalRetriever):
+    RSS_URL = 'https://www.nature.com/nphoton.rss'
 
     def extract_abstract(self, entry):
         response = requests.get(entry.link)
@@ -43,6 +66,20 @@ class NaturePhotonicsRetriever:
             abst += article_content.text + '\n'
         if article_teaser is not None:
             abst += article_teaser.text + '\n'
+
+        return abst
+
+
+class LightScienceApplicationsRetriever(JournalRetriever):
+    RSS_URL = 'https://www.nature.com/lsa.rss'
+
+    def extract_abstract(self, entry):
+        response = requests.get(entry.link)
+        soup = BeautifulSoup(response.text, 'html.parser')
+
+        abs1_content = soup.find(id='Abs1-content')
+
+        abst = abs1_content.text + '\n' if abs1_content is not None else ''
 
         return abst
 

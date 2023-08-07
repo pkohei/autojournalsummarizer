@@ -4,7 +4,7 @@ from time import sleep
 
 import pytz
 
-from retriever import NaturePhotonicsRetriever
+import retriever
 from sender import DiscordSender
 from summary import summarize_abstract
 
@@ -15,13 +15,19 @@ def main():
     discord_url = os.environ['DISCORD_URL']
 
     now = datetime.now(tz=pytz.timezone('Asia/Tokyo'))
-    retriever = NaturePhotonicsRetriever()
-    recent_entries = retriever.fetch_recent_entries(now, hours_ago=24)
+
+    retrievers = [
+        retriever.NaturePhotonicsRetriever(),
+        retriever.LightScienceApplicationsRetriever()
+    ]
+
+    recent_entries = []
+    for ret in retrievers:
+        recent_entries += ret.fetch_recent_entries(now, hours_ago=24)
 
     sender = DiscordSender(discord_url)
     for entry in recent_entries:
-        abstract = retriever.extract_abstract(entry)
-        summary = summarize_abstract(abstract, openai_api_key, model)
+        summary = summarize_abstract(entry['abstract'], openai_api_key, model)
         sender.send_summary(entry, summary)
         sleep(5)
 

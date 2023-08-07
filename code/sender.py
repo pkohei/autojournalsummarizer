@@ -8,14 +8,11 @@ class DiscordSender:
         self.webhook_url = webhook_url
 
     def send_summary(self, entry, summary):
-        authors = [author.name for author in entry.authors]
-        authors = ', '.join(authors)
-
-        message = f'# {entry.title}\n' \
+        message = f'# {entry["title"]}\n' \
             '## 概要\n' \
-            f'著者: {authors}\n' \
-            f'日付: {entry.updated}\n' \
-            f'URL: {entry.link}\n\n' \
+            f'著者: {entry["authors"]}\n' \
+            f'日付: {entry["updated_date"]}\n' \
+            f'URL: {entry["link"]}\n\n' \
             f'{summary}\n'
 
         print('------------------------------')

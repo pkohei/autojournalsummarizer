@@ -1,7 +1,7 @@
 import openai
 
 
-def summarize_abstract(abstract, api_key, model='gpt-3.5-turbo',):
+def summarize_abstract(abstract, api_key, model='gpt-3.5-turbo'):
     openai.api_key = api_key
 
     res = openai.ChatCompletion.create(
