@@ -18,7 +18,8 @@ def main():
 
     retrievers = [
         retriever.NaturePhotonicsRetriever(),
-        retriever.LightScienceApplicationsRetriever()
+        retriever.LightScienceApplicationsRetriever(),
+        retriever.ArxivPhysicsOpticsRetriever(),
     ]
 
     recent_entries = []
@@ -29,7 +30,7 @@ def main():
     for entry in recent_entries:
         summary = summarize_abstract(entry['abstract'], openai_api_key, model)
         sender.send_summary(entry, summary)
-        sleep(5)
+        sleep(1)
 
 
 if __name__ == '__main__':
