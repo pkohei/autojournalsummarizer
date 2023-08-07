@@ -15,5 +15,3 @@ services:
       - ./code:/home/app/code
     working_dir: /home/app/code
     command: tail -f > /dev/null
-volumes:
-  python-packages:
