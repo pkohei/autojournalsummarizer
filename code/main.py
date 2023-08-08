@@ -30,7 +30,13 @@ def main():
 
     sender = DiscordSender(discord_url)
     for entry in recent_entries:
-        summary = summarize_abstract(entry['abstract'], openai_api_key, model)
+        if entry['abstract']:
+            summary = summarize_abstract(
+                entry['abstract'],
+                openai_api_key,
+                model)
+        else:
+            summary = ""
         sender.send_summary(entry, summary)
         sleep(1)
 
