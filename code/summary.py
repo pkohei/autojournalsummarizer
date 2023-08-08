@@ -9,28 +9,49 @@ def summarize_abstract(abstract, api_key, model='gpt-3.5-turbo'):
         messages=[
             {
                 'role': 'system',
-                'content': 'あなたは優れた研究者です。'
-                '与えられた論文のアブストラクトを要約した上で、内容を簡単に解説してください。'
-                'ただし、出力は以下のルールとフォーマットに従ってください。\n'
-                '[ルール]\n'
-                '・要約は箇条書きで3行で出力する\n'
-                '・要約には筆者独自の検討や重要な結論をかならず含める\n'
-                '・解説は1行で出力する\n'
-                '・解説には専門用語の説明を加えて、専門外の人にも分かるようにする\n'
-                '・日本語に翻訳して出力する\n'
-                '・なるべく体言止めを使う(例:~を提案する。 → ~を提案。)\n'
-                '・「です・ます」調ではなく「だ・である」調を使う(例:~できます → ~できる)\n'
-                '[フォーマット]\n'
-                '## 要約\n'
-                '- 項目1\n'
-                '- 項目2\n'
-                '- 項目3\n\n'
-                '## 解説\n'
-                '解説内容'
+                'content': 'You are an excellent researcher. '
+                'Please summarize the abstract of the given paper and then give '
+                'a brief description of its contents. '
+                'However, your output should follow the rules and formatting below.\n'
+                '[Rules]\n'
+                '- The summary should be 3 lines with bullet points.\n'
+                '- The summary must include the author\'s own discussion and important conclusions.\n'
+                '- The description must be 1 line and no more than 300 words.\n'
+                '- The description should include explanations of important technical terms and background knowledge so that even high school students can understand the importance of the research.\n'
+                '[Format]\n'
+                '## Summary\n'
+                '- Item 1\n'
+                '- Item 2\n'
+                '- Item 3\n\n'
+                '## Description\n'
+                'description content (1 line)'
             },
             {
                 'role': 'user',
                 'content': abstract
+            }
+        ]
+    )
+
+    res = openai.ChatCompletion.create(
+        model=model,
+        messages=[
+            {
+                'role': 'system',
+                'content': 'あなたはプロの翻訳家です。'
+                '与えられた英文を自然な日本語に訳してください。'
+                'ただし、以下のフォーマットに従ってください。\n'
+                '[フォーマット]\n'
+                '## 要約\n'
+                '- 翻訳内容1\n'
+                '- 翻訳内容2\n'
+                '- 翻訳内容3\n\n'
+                '## 解説\n'
+                'Descriptionの内容の翻訳（1行）'
+            },
+            {
+                'role': 'user',
+                'content': res.choices[0].message.content
             }
         ]
     )
