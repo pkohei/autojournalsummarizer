@@ -22,9 +22,11 @@ def main():
         retriever.ArxivPhysicsOpticsRetriever(),
     ]
 
+    print('try to fetch recent entries...')
     recent_entries = []
     for ret in retrievers:
         recent_entries += ret.fetch_recent_entries(now, hours_ago=24)
+    print(f'{len(recent_entries)} entries are fetched!')
 
     sender = DiscordSender(discord_url)
     for entry in recent_entries:
