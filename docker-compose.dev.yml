@@ -9,8 +9,6 @@ services:
         GID: 1000
         USERNAME: app
         GROUPNAME: app
-    logging:
-      driver: syslog
     env_file:
       - .env
     volumes:
