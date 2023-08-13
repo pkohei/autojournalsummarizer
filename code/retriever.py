@@ -1,41 +1,86 @@
+import os
+import time
 from abc import ABCMeta, abstractmethod
-from datetime import datetime, timedelta
-from time import mktime, sleep
 
 import feedparser
-import pytz
 import requests
 from bs4 import BeautifulSoup
 
 
 class JournalRetriever(metaclass=ABCMeta):
     RSS_URL = ""
+    LAST_ENTRIES_LOG_FILE = ""
 
-    def fetch_recent_entries(self, now=None, hours_ago=24):
+    def __init__(self) -> None:
+        self.entries = []
+        self.updated_entries = []
+
+    def retrieve(self):
+        last_entry_ids = self.get_last_entry_ids()
+
         feed = feedparser.parse(self.RSS_URL)
-        recent_entries = self.retrieve_recent_entries(
-            feed, now=now, hours_ago=hours_ago)
+        self.entries = self.format_entries(feed)
+        self.updated_entries = self.retrieve_updated_entries(last_entry_ids)
 
-        for entry in recent_entries:
+        for entry in self.updated_entries:
             abst = self.extract_abstract(entry)
             entry['abstract'] = abst
-            sleep(1)
+            time.sleep(1)
 
-        recent_entries.sort(key=lambda x: x['updated_date'])
+        return self.updated_entries
 
-        return recent_entries
+    def get_last_entry_ids(self):
+        if os.path.isfile(self.LAST_ENTRIES_LOG_FILE):
+            with open(self.LAST_ENTRIES_LOG_FILE, 'r', encoding='UTF-8') as f:
+                last_entry_ids = f.readlines()
+                last_entry_ids = [e.replace('\n', '') for e in last_entry_ids]
+        else:
+            last_entry_ids = []
+        return last_entry_ids
+
+    def retrieve_updated_entries(self, last_entry_ids):
+        updated_entries = []
+        for entry in self.entries:
+            if not (entry['id'] in last_entry_ids):
+                updated_entries.append(entry)
+        updated_entries.sort(key=lambda x: x['updated'])
+        return updated_entries
+
+    def update_log(self):
+        if len(self.updated_entries) == 0:
+            return
+
+        os.makedirs(os.path.dirname(self.LAST_ENTRIES_LOG_FILE), exist_ok=True)
+        with open(self.LAST_ENTRIES_LOG_FILE, 'w', encoding='UTF-8') as f:
+            f.writelines([entry['id'] + '\n' for entry in self.entries])
+
+        print(f'\"{self.LAST_ENTRIES_LOG_FILE}\" is updated!')
+
+    @abstractmethod
+    def format_entries(self, feed):
+        return []
 
     @abstractmethod
     def extract_abstract(self, entry):
         return ""
 
-    @abstractmethod
-    def retrieve_recent_entries(self, feed, now, hours_ago):
-        return []
-
 
 class NaturePhotonicsRetriever(JournalRetriever):
     RSS_URL = 'https://www.nature.com/nphoton.rss'
+    LAST_ENTRIES_LOG_FILE = "./logs/nature_photonics_log.txt"
+
+    def format_entries(self, feed):
+        entries = []
+        for entry in feed.entries:
+            formatted_entry = construct_entry(
+                id=entry.id,
+                title=entry.title,
+                authors=[author.name for author in entry.authors],
+                updated_parsed=entry.updated_parsed,
+                link=entry.link
+            )
+            entries.append(formatted_entry)
+        return entries
 
     def extract_abstract(self, entry):
         response = requests.get(entry['link'])
@@ -66,25 +111,23 @@ class NaturePhotonicsRetriever(JournalRetriever):
 
         return abst
 
-    def retrieve_recent_entries(self, feed, now=None, hours_ago=24):
-        if now is None:
-            now = datetime.now(tz=pytz.timezone('Asia/Tokyo'))
-
-        recent_entries = []
-
-        for entry in feed.entries:
-            if (check_updated_recently(entry.updated_parsed, now, hours_ago)):
-                recent_entries.append({
-                    'title': entry.title,
-                    'authors': ', '.join([author.name for author in entry.authors]),
-                    'updated_date': entry.updated,
-                    'link': entry.link,
-                })
-        return recent_entries
-
 
 class LightScienceApplicationsRetriever(JournalRetriever):
     RSS_URL = 'https://www.nature.com/lsa.rss'
+    LAST_ENTRIES_LOG_FILE = "./logs/light_science_applications_log.txt"
+
+    def format_entries(self, feed):
+        entries = []
+        for entry in feed.entries:
+            formatted_entry = construct_entry(
+                id=entry.id,
+                title=entry.title,
+                authors=[author.name for author in entry.authors],
+                updated_parsed=entry.updated_parsed,
+                link=entry.link
+            )
+            entries.append(formatted_entry)
+        return entries
 
     def extract_abstract(self, entry):
         response = requests.get(entry['link'])
@@ -96,65 +139,47 @@ class LightScienceApplicationsRetriever(JournalRetriever):
 
         return abst
 
-    def retrieve_recent_entries(self, feed, now=None, hours_ago=24):
-        if now is None:
-            now = datetime.now(tz=pytz.timezone('Asia/Tokyo'))
-
-        recent_entries = []
-
-        for entry in feed.entries:
-            if (check_updated_recently(entry.updated_parsed, now, hours_ago)):
-                recent_entries.append({
-                    'title': entry.title,
-                    'authors': ', '.join([author.name for author in entry.authors]),
-                    'updated_date': entry.updated,
-                    'link': entry.link,
-                })
-
-        return recent_entries
-
 
 class ArxivPhysicsOpticsRetriever(JournalRetriever):
     RSS_URL = 'http://export.arxiv.org/rss/physics.optics'
+    LAST_ENTRIES_LOG_FILE = './logs/arxiv_physics_optics_log.txt'
+
+    def format_entries(self, feed):
+        entries = []
+
+        for entry in feed.entries:
+            authors = entry.author
+            authors = BeautifulSoup(authors, "html.parser").text.split(', ')
+            abst = BeautifulSoup(entry.description, 'html.parser').text
+
+            formatted_entry = construct_entry(
+                id=entry.id,
+                title=entry.title,
+                authors=authors,
+                updated_parsed=feed.updated_parsed,
+                link=entry.link,
+                abstract=abst
+            )
+            entries.append(formatted_entry)
+
+        return entries
 
     def extract_abstract(self, entry):
         return entry['abstract']
 
-    def retrieve_recent_entries(self, feed, now=None, hours_ago=24):
-        if now is None:
-            now = datetime.now(tz=pytz.timezone('Asia/Tokyo'))
 
-        if (check_updated_recently(feed.updated_parsed, now, hours_ago)):
-            recent_entries = []
-            for entry in feed.entries:
-                authors = BeautifulSoup(
-                    entry.authors[0].name, 'html.parser').text
-                abst = BeautifulSoup(
-                    entry.description, 'html.parser').text
-
-                recent_entries.append({
-                    'title': entry.title,
-                    'authors': authors,
-                    'updated_date': feed.updated,
-                    'link': entry.link,
-                    'abstract': abst
-                })
-            return recent_entries
-        else:
-            return []
-
-
-def check_updated_recently(updated_parsed, now=None, hours_ago=24):
-    jst = pytz.timezone('Asia/Tokyo')
-
-    if now is None:
-        now = datetime.now(tz=jst)
-
-    entry_time = datetime.fromtimestamp(
-        mktime(updated_parsed), tz=jst)
-    start_time = now - timedelta(hours=hours_ago)
-
-    if (start_time <= entry_time < now):
-        return True
-
-    return False
+def construct_entry(
+        id: str,
+        title: str,
+        authors: list[str],
+        updated_parsed: time.struct_time,
+        link: str,
+        abstract: str = ""):
+    return {
+        'id': id,
+        'title': title,
+        'authors': authors,
+        'updated': updated_parsed,
+        'link': link,
+        'abstract': abstract
+    }

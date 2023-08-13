@@ -1,4 +1,5 @@
 import json
+import time
 
 import requests
 
@@ -10,8 +11,8 @@ class DiscordSender:
     def send_summary(self, entry, summary):
         message = f'# {entry["title"]}\n' \
             '## 概要\n' \
-            f'著者: {entry["authors"]}\n' \
-            f'日付: {entry["updated_date"]}\n' \
+            f'著者: {", ".join(entry["authors"])}\n' \
+            f'日付: {time.strftime("%Y-%m-%d %H:%M%z", entry["updated"])}\n' \
             f'URL: {entry["link"]}\n\n' \
             f'{summary}\n'
 

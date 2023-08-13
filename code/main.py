@@ -1,8 +1,5 @@
 import os
-from datetime import datetime
 from time import sleep
-
-import pytz
 
 import retriever
 from sender import DiscordSender
@@ -14,22 +11,20 @@ def main():
     openai_api_key = os.environ['OPENAI_API_KEY']
     discord_url = os.environ['DISCORD_URL']
 
-    now = datetime.now(tz=pytz.timezone('Asia/Tokyo'))
-
     retrievers = [
         retriever.NaturePhotonicsRetriever(),
         retriever.LightScienceApplicationsRetriever(),
         retriever.ArxivPhysicsOpticsRetriever(),
     ]
 
-    print('try to fetch recent entries...')
-    recent_entries = []
+    print('try to fetch updated entries...')
+    updated_entries = []
     for ret in retrievers:
-        recent_entries += ret.fetch_recent_entries(now, hours_ago=24)
-    print(f'{len(recent_entries)} entries are fetched!')
+        updated_entries += ret.retrieve()
+    print(f'{len(updated_entries)} entries are fetched!')
 
     sender = DiscordSender(discord_url)
-    for entry in recent_entries:
+    for entry in updated_entries:
         if entry['abstract']:
             summary = summarize_abstract(
                 entry['abstract'],
@@ -39,6 +34,9 @@ def main():
             summary = ""
         sender.send_summary(entry, summary)
         sleep(1)
+
+    for ret in retrievers:
+        ret.update_log()
 
 
 if __name__ == '__main__':
