@@ -1,19 +1,35 @@
-version: '3'
 services:
-  journalgpt:
+  dev:
     build:
       context: .
-      dockerfile: ./Dockerfile
+      dockerfile: ./docker/Dockerfile.dev
       args:
         UID: 1000
         GID: 1000
         USERNAME: app
         GROUPNAME: app
-    logging:
-      driver: syslog
     env_file:
       - .env
     volumes:
-      - ./code:/home/app/code
-    working_dir: /home/app/code
+      - ./:/home/app/project
+      - python-packages:/home/app/.local/share
+    working_dir: /home/app/project
     command: tail -f > /dev/null
+  prod:
+    build:
+      context: .
+      dockerfile: ./docker/Dockerfile
+      args:
+        UID: 1000
+        GID: 1000
+        USERNAME: app
+        GROUPNAME: app
+    env_file:
+      - .env
+    volumes:
+      - ./auth:/home/app/project/auth
+      - ./settings:/home/app/project/settings
+    working_dir: /home/app/project
+    command: python main.py
+volumes:
+  python-packages:

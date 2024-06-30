@@ -10,8 +10,14 @@ requests = "*"
 beautifulsoup4 = "*"
 schedule = "*"
 pytz = "*"
+arxiv = "*"
+pyzotero = "*"
+pydrive2 = "*"
+pypdf = "*"
 
 [dev-packages]
+jupyterlab = "*"
+ruff = "*"
 
 [requires]
 python_version = "3.10"

@@ -1,7 +1,7 @@
 FROM python:3.10
 
 RUN apt-get update \
-    && apt-get -y install locales libsndfile1 \
+    && apt-get -y install locales libsndfile1 git\
     && localedef -f UTF-8 -i ja_JP ja_JP.UTF-8
 ENV LANG=ja_JP.UTF-8 LANGUAGE=ja_JP:ja LC_ALL=ja_JP.UTF-8 TZ=JST-9
 
@@ -35,7 +35,7 @@ RUN echo "if [[ -z \"\${VIRTUAL_ENV}\" ]]; then" >> /home/${USERNAME}/.bashrc &&
     echo "fi"                                    >> /home/${USERNAME}/.bashrc
 
 # Entrypointの設定
-COPY entrypoints/ /opt/bin/
+COPY /docker/entrypoints/ /opt/bin
 ENTRYPOINT [ \
     "prehook", "/opt/bin/docker-setup.sh", "--", \
     "/opt/bin/docker-entrypoint.sh"]
