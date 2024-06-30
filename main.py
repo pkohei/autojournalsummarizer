@@ -168,7 +168,7 @@ def make_message(paper: arxiv.Result, summary: dict[str, str]) -> str:
     message = (
         f"# [{summary['japanese_title']}]({paper.links[0].href})\n"
         f"第一著者：{paper.authors[0].name}\n"
-        f"日付：{paper.published.strftime('%Y-%m-%d %H-%M-%S')}\n"
+        f"日付：{paper.published.strftime('%Y-%m-%d %H:%M:%S')}\n"
         "## 一言で説明すると？\n"
         f"{summary['summary']}\n"
         "## 先行研究と比べて何がすごい？\n"
