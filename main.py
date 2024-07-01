@@ -250,7 +250,7 @@ def register_zotero(paper: arxiv.Result, pdf_path: str) -> None:
     pdf_filename = os.path.basename(pdf_path)
     attachment = zot.item_template("attachment", linkmode="linked_file")
     attachment["title"] = pdf_filename
-    attachment["path"] = "attachment:" + pdf_filename
+    attachment["path"] = pdf_filename
     attachment["contentType"] = "application/pdf"
     zot.create_items([attachment], parentid=item_id)
 
