@@ -1,7 +1,7 @@
-client_config_file: ./auth/client_secret.json
+client_config_backend: service
+service_config:
+  client_json_file_path: ./auth/client_secret.json
 
 save_credentials: True
 save_credentials_backend: file
 save_credentials_file: ./auth/saved_credentials.json
-
-get_refresh_token: True

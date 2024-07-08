@@ -201,7 +201,7 @@ def send_discord(message: str) -> None:
 
 def upload_google_drive(pdf_path: str) -> None:
     gauth = GoogleAuth(GOOGLE_AUTH_SETTING_FILE)
-    gauth.LocalWebserverAuth()
+    gauth.ServiceAuth()
     drive = GoogleDrive(gauth)
     folders = drive.ListFile({"q": f'title = "{GOOGLE_FOLDER_NAME}"'}).GetList()
     file = drive.CreateFile(

@@ -29,7 +29,7 @@ ZOTERO_LIBRARY_ID={your-library-id}
 etc...
 ```
 
-[こちら](https://zenn.dev/spacegeek/articles/45270323b1d2bc)を参考にGoogle Drive APIの`client_secret.json`を取得し、`auth`以下に配置する。
+[こちら](https://yururi-do.com/backup-from-vps-to-gdrive-with-pydrive2/)と[こちら](https://yururi-do.com/backup-to-gdrive-with-pydrive2-and-gas/#st-toc-h-2)を参考に、Googleサービスアカウントの`client_secret.json`を取得し、`auth`以下に配置する(OAuth認証の場合、個人＆無料利用ではリフレッシュトークンの有効期限が1週間になってしまうため、サービスアカウント認証とすること)。
 
 最終的に下記のような配置になればよい。
 
