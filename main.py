@@ -43,6 +43,11 @@ def main() -> None:
     interesting_titles = [p.title for p in interesting_papers]
     print("Interesting papers:", len(interesting_papers))
 
+    send_discord(
+        f"新着論文：{len(papers)}本\n"
+        f"関心度の高い論文：{len(interesting_papers)}本"
+    )
+
     clear_log()
     for paper in papers:
         if paper.title not in interesting_titles:
