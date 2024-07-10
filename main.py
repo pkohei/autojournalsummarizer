@@ -37,6 +37,7 @@ def main() -> None:
     print("Updated papers:", len(papers))
     if len(papers) == 0:
         print("There are no updated papers.")
+        send_discord("本日の新着論文はありません。")
         return
 
     interesting_papers = extract_interesting_papers(papers)
@@ -45,7 +46,7 @@ def main() -> None:
 
     send_discord(
         f"新着論文：{len(papers)}本\n"
-        f"関心度の高い論文：{len(interesting_papers)}本"
+        + f"関心度の高い論文：{len(interesting_papers)}本"
     )
 
     clear_log()
