@@ -71,7 +71,7 @@ def get_last_published_datetime() -> Union[datetime, None]:
             f.write("")
         return
     with open(LAST_DATE_FILE, mode="r") as f:
-        last_published = f.readline()
+        last_published = f.readline().rstrip("\n")
         if last_published == "":
             return
         last_published = datetime.fromisoformat(last_published)
