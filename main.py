@@ -49,7 +49,6 @@ def main() -> None:
         + f"関心度の高い論文：{len(interesting_papers)}本"
     )
 
-    clear_log()
     for paper in papers:
         if paper.title not in interesting_titles:
             update_log(paper.published)
@@ -227,7 +226,11 @@ def register_zotero(paper: arxiv.Result, pdf_path: str) -> None:
     item["title"] = paper.title
     item["creators"] = []
     for author in paper.authors:
-        first_name, last_name = author.name.split(maxsplit=1)
+        try:
+            first_name, last_name = author.name.split(maxsplit=1)
+        except ValueError:
+            first_name = author.name
+            last_name = ""
         item["creators"].append(
             {
                 "creatorType": "author",
@@ -261,12 +264,6 @@ def register_zotero(paper: arxiv.Result, pdf_path: str) -> None:
     zot.create_items([attachment], parentid=item_id)
 
     print("Register to Zotero:", paper.title)
-
-
-def clear_log() -> None:
-    with open(LAST_DATE_FILE, mode="w") as f:
-        f.write("")
-    print("Log is cleared!")
 
 
 def update_log(published_datetime: datetime) -> None:
