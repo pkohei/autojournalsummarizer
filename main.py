@@ -1,3 +1,4 @@
+import argparse
 import json
 import os
 import re
@@ -13,7 +14,6 @@ from pydrive2.drive import GoogleDrive
 from pypdf import PdfReader
 from pyzotero.zotero import Zotero
 
-MODEL = "gpt-4o"
 ARXIV_CATEGORY = "cs.LG"
 
 FILTER_PROMPT_FILE = "./prompts/filter_prompt.txt"
@@ -28,7 +28,7 @@ GOOGLE_FOLDER_NAME = "papers"
 ZOTERO_COLLECTION_NAME = "daily"
 
 
-def main() -> None:
+def main(num_papers: int, model: str) -> None:
     last_published = get_last_published_datetime()
     papers = retrieve_recent_arxiv_papers(
         category=ARXIV_CATEGORY,
@@ -40,7 +40,7 @@ def main() -> None:
         send_discord("本日の新着論文はありません。")
         return
 
-    interesting_papers = extract_interesting_papers(papers)
+    interesting_papers = extract_interesting_papers(papers, num_papers, model)
     interesting_titles = [p.title for p in interesting_papers]
     print("Interesting papers:", len(interesting_papers))
 
@@ -56,8 +56,9 @@ def main() -> None:
         with TemporaryDirectory() as dirpath:
             pdf_path = paper.download_pdf(dirpath=dirpath)
             text = extract_text_from_pdf(pdf_path)
-            summary = summarize_paper(paper.title, text)
+            summary = summarize_paper(paper.title, text, model)
             message = make_message(paper=paper, summary=summary)
+            print(message)
 
             send_discord(message)
             upload_google_drive(pdf_path)
@@ -72,6 +73,7 @@ def get_last_published_datetime() -> Union[datetime, None]:
         return
     with open(LAST_DATE_FILE, mode="r") as f:
         last_published = f.readline().rstrip("\n")
+        print(last_published)
         if last_published == "":
             return
         last_published = datetime.fromisoformat(last_published)
@@ -101,7 +103,7 @@ def retrieve_recent_arxiv_papers(
     return papers[::-1]
 
 
-def extract_interesting_papers(papers: list[arxiv.Result]):
+def extract_interesting_papers(papers: list[arxiv.Result], num_papers: int, model: str) -> list[arxiv.Result]:
     if not (os.path.exists(KEYWORDS_FILE) and os.path.exists(FILTER_PROMPT_FILE)):
         return papers
 
@@ -123,7 +125,7 @@ def extract_interesting_papers(papers: list[arxiv.Result]):
     for idx, p in enumerate(papers):
         titles_sentence += f"{idx}. {p.title}\n"
     completion = client.chat.completions.create(
-        model=MODEL,
+        model=model,
         messages=[
             {"role": "system", "content": prompt},
             {"role": "user", "content": titles_sentence},
@@ -149,14 +151,14 @@ def extract_text_from_pdf(pdf_path: str):
     return text
 
 
-def summarize_paper(title: str, text: str) -> dict[str, str]:
+def summarize_paper(title: str, text: str, model: str) -> dict[str, str]:
     with open(SUMMARIZE_PROMPT_FILE, mode="r") as f:
         summarize_prompt = f.read()
 
     client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
 
     res = client.chat.completions.create(
-        model="gpt-4o",
+        model=model,
         messages=[
             {"role": "system", "content": summarize_prompt},
             {
@@ -273,4 +275,10 @@ def update_log(published_datetime: datetime) -> None:
 
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--num_papers", type=int, default=20)
+    parser.add_argument("--model", type=str, default="gpt-4o-mini")
+    args = parser.parse_args()
+    num_papers = args.num_papers
+    model = args.model
+    main(num_papers, model)
