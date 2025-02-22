@@ -9,6 +9,7 @@ from tempfile import TemporaryDirectory
 
 import arxiv
 from openai import OpenAI
+from pydantic import BaseModel
 from pydrive2.auth import GoogleAuth
 from pydrive2.drive import GoogleDrive
 from pypdf import PdfReader
@@ -66,6 +67,27 @@ def main(num_papers: int, model: str) -> None:
             update_log(paper.published)
 
 
+def test(num_papers: int, model: str) -> None:
+    print("Test mode")
+    papers = retrieve_recent_arxiv_papers(category=ARXIV_CATEGORY)
+    print("Updated papers:", len(papers))
+    if len(papers) == 0:
+        print("There are no updated papers.")
+        return
+
+    interesting_papers = extract_interesting_papers(papers, num_papers, model)
+    print("Interesting papers:", len(interesting_papers))
+
+    for paper in interesting_papers:
+        with TemporaryDirectory() as dirpath:
+            pdf_path = paper.download_pdf(dirpath=dirpath)
+            text = extract_text_from_pdf(pdf_path)
+            summary = summarize_paper(paper.title, text, model)
+            message = make_message(paper=paper, summary=summary)
+            print(message)
+        break
+
+
 def get_last_published_datetime() -> Union[datetime, None]:
     if not os.path.exists(LAST_DATE_FILE):
         with open(LAST_DATE_FILE, mode="w") as f:
@@ -103,7 +125,9 @@ def retrieve_recent_arxiv_papers(
     return papers[::-1]
 
 
-def extract_interesting_papers(papers: list[arxiv.Result], num_papers: int, model: str) -> list[arxiv.Result]:
+def extract_interesting_papers(
+    papers: list[arxiv.Result], num_papers: int, model: str
+) -> list[arxiv.Result]:
     if not (os.path.exists(KEYWORDS_FILE) and os.path.exists(FILTER_PROMPT_FILE)):
         return papers
 
@@ -124,17 +148,16 @@ def extract_interesting_papers(papers: list[arxiv.Result], num_papers: int, mode
     titles_sentence = ""
     for idx, p in enumerate(papers):
         titles_sentence += f"{idx}. {p.title}\n"
-    completion = client.chat.completions.create(
+    completion = client.beta.chat.completions.parse(
         model=model,
         messages=[
-            {"role": "system", "content": prompt},
-            {"role": "user", "content": titles_sentence},
+            {"role": "user", "content": prompt + titles_sentence},
         ],
-        response_format={"type": "json_object"},
+        response_format=Papers,
     )
-    response = json.loads(completion.choices[0].message.content)
+    response = completion.choices[0].message.parsed
     print(response)
-    target_idxs = [int(p["idx"]) for p in response["papers"]]
+    target_idxs = [int(p.idx) for p in response.papers]
 
     interesting_papers = []
     for idx in target_idxs:
@@ -157,36 +180,37 @@ def summarize_paper(title: str, text: str, model: str) -> dict[str, str]:
 
     client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
 
-    res = client.chat.completions.create(
+    res = client.beta.chat.completions.parse(
         model=model,
         messages=[
-            {"role": "system", "content": summarize_prompt},
             {
                 "role": "user",
-                "content": f"[タイトル]\n{title}\n[本文]\n{text}",
+                "content": summarize_prompt + f"[タイトル]\n{title}\n[本文]\n{text}",
             },
         ],
-        response_format={"type": "json_object"},
+        response_format=PaperSummary,
     )
-    return json.loads(res.choices[0].message.content)
-
+    return res.choices[0].message.parsed
 
 def make_message(paper: arxiv.Result, summary: dict[str, str]) -> str:
     message = (
-        f"# [{summary['japanese_title']}]({paper.links[0].href})\n"
+        f"# [{summary.japanese_title}]({paper.links[0].href})\n"
         f"第一著者：{paper.authors[0].name}\n"
         f"日付：{paper.published.strftime('%Y-%m-%d %H:%M:%S')}\n"
         "## 一言で説明すると？\n"
-        f"{summary['summary']}\n"
+        f"{summary.summary}\n"
         "## 先行研究と比べて何がすごい？\n"
-        f"{summary['merit']}\n"
+        f"{summary.merit}\n"
         "## 技術や手法のキモは何？\n"
-        f"{summary['method']}\n"
+        f"{summary.method}\n"
         "## どうやって有効だと検証した？\n"
-        f"{summary['valid']}\n"
+        f"{summary.valid}\n"
         "## 課題や議論はある？\n"
-        f"{summary['discussion']}\n"
+        f"{summary.discussion}\n"
+        "## キーワード\n"
     )
+    for keyword in summary.keywords:
+        message += f"- {keyword.keyword}：{keyword.explanation}\n"
     return message
 
 
@@ -274,11 +298,38 @@ def update_log(published_datetime: datetime) -> None:
     print("Log is updated!:", published_datetime.isoformat())
 
 
+class Paper(BaseModel):
+    idx: int
+    title: str
+    reason: str
+
+class Papers(BaseModel):
+    papers: list[Paper]
+
+class Keyword(BaseModel):
+    keyword: str
+    explanation: str
+
+class PaperSummary(BaseModel):
+    japanese_title: str
+    summary: str
+    merit: str
+    method: str
+    valid: str
+    discussion: str
+    keywords: list[Keyword]
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--num_papers", type=int, default=20)
-    parser.add_argument("--model", type=str, default="gpt-4o-mini")
+    parser.add_argument("--model", type=str, default="gpt-4o")
+    parser.add_argument("--test", action="store_true", default=False)
     args = parser.parse_args()
     num_papers = args.num_papers
     model = args.model
-    main(num_papers, model)
+
+    if args.test:
+        test(num_papers, model)
+    else:
+        main(num_papers, model)
