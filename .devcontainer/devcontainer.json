@@ -2,28 +2,30 @@
   "name": "AutoJournalSummarizer Dev Environment",
   "build": {
     "dockerfile": "Dockerfile",
-    "context": ".."
+    "context": "..",
+    "target": "development"
   },
   "features": {
-    "ghcr.io/devcontainers/features/github-cli:1": {},
-    "ghcr.io/devcontainers/features/node:1": {
-      "nodeGypDependencies": true,
-      "version": "18"
-    }
+    "ghcr.io/devcontainers/features/git:1": {},
+    "ghcr.io/devcontainers/features/github-cli:1": {}
   },
   "customizations": {
     "vscode": {
       "extensions": [
         "ms-python.python",
-        "ms-python.flake8",
-        "ms-python.mypy-type-checker",
+        "ms-python.black-formatter",
         "charliermarsh.ruff",
+        "ms-python.mypy-type-checker",
         "ms-python.pytest",
+        "ms-vscode.vscode-json",
+        "redhat.vscode-yaml",
+        "ms-vscode.docker",
+        "ms-azuretools.vscode-docker",
         "GitHub.copilot",
         "GitHub.copilot-chat"
       ],
       "settings": {
-        "python.defaultInterpreterPath": "/app/.venv/bin/python",
+        "python.defaultInterpreterPath": "/workspace/.venv/bin/python",
         "python.terminal.activateEnvironment": false,
         "python.linting.enabled": true,
         "python.linting.ruffEnabled": true,
@@ -36,12 +38,19 @@
           }
         },
         "python.testing.pytestEnabled": true,
-        "python.testing.pytestArgs": ["tests"]
+        "python.testing.pytestArgs": ["tests"],
+        "files.associations": {
+          "*.yml": "yaml",
+          "*.yaml": "yaml"
+        }
       }
     }
   },
-  "postCreateCommand": "uv sync && npm install -g @anthropic-ai/claude-code",
   "forwardPorts": [],
-  "remoteUser": "appuser",
-  "workspaceFolder": "/app"
+  "postCreateCommand": "echo 'Development environment ready! Run: uv sync'",
+  "remoteUser": "vscode",
+  "workspaceFolder": "/workspace",
+  "mounts": [
+    "source=${localWorkspaceFolder},target=/workspace,type=bind,consistency=cached"
+  ]
 }

@@ -3,14 +3,15 @@ services:
     build:
       context: .
       dockerfile: .devcontainer/Dockerfile
+      target: development
     env_file:
       - .env
     volumes:
-      - ./:/app
-      - uv-cache:/home/appuser/.cache/uv
-    working_dir: /app
+      - ./:/workspace
+      - uv-cache:/home/vscode/.cache/uv
+    working_dir: /workspace
     command: tail -f /dev/null
-    user: appuser
+    user: vscode
     
   prod:
     build:
