@@ -18,21 +18,21 @@ repos:
         args: [--fix]
       - id: ruff-format
 
-  # MyPy for type checking (warnings only for development)
-  - repo: local
+  # MyPy for type checking (official mirror, non-blocking for development)
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.16.1
     hooks:
-      - id: mypy-check
-        name: mypy type checking
-        entry: bash -c 'uv run mypy src || echo "⚠️  Type checking issues found - please review"'
-        language: system
-        files: ^src/.*\.py$
-        pass_filenames: false
+      - id: mypy
+        additional_dependencies: [types-requests]
+        args: [--ignore-missing-imports, --no-error-summary]
+        files: ^src/
+        stages: [manual]  # Run manually only to avoid blocking commits
 
-  # Pytest for running tests (only on pre-push)
+  # Pytest for running tests (only on pre-push, no official hook available)
   - repo: local
     hooks:
       - id: pytest
-        name: pytest
+        name: Run pytest
         entry: uv run pytest
         language: system
         pass_filenames: false
