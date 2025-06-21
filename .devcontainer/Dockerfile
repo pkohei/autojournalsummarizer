@@ -29,8 +29,8 @@ ENV PATH="/app/.venv/bin:$PATH"
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONDONTWRITEBYTECODE=1
 
-# Copy dependency files
-COPY --chown=appuser:appuser pyproject.toml uv.lock ./
+# Copy dependency files and README (required by pyproject.toml)
+COPY --chown=appuser:appuser pyproject.toml uv.lock README.md ./
 
 # Create virtual environment and install dependencies
 RUN uv sync --dev
