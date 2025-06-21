@@ -46,5 +46,8 @@
   "forwardPorts": [],
   "postCreateCommand": "sudo chown -R vscode:vscode /home/vscode/.claude && echo 'Development environment ready! Run: uv sync'",
   "remoteUser": "vscode",
-  "workspaceFolder": "/workspace"
+  "workspaceFolder": "/workspace",
+  "mounts": [
+    "source=${localEnv:HOME}/.ssh,target=/home/vscode/.ssh,type=bind,consistency=cached"
+  ]
 }
