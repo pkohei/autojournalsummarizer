@@ -32,6 +32,9 @@ ENV PYTHONDONTWRITEBYTECODE=1
 # Copy dependency files and README (required by pyproject.toml)
 COPY --chown=appuser:appuser pyproject.toml uv.lock README.md ./
 
+# Copy source code directory (required for editable install)
+COPY --chown=appuser:appuser src/ ./src/
+
 # Create virtual environment and install dependencies
 RUN uv sync --dev
 
