@@ -30,10 +30,10 @@ ENV PYTHONUNBUFFERED=1
 ENV PYTHONDONTWRITEBYTECODE=1
 
 # Copy dependency files
-COPY --chown=appuser:appuser pyproject.toml ./
+COPY --chown=appuser:appuser pyproject.toml uv.lock ./
 
-# Install dependencies
-RUN uv venv && uv sync
+# Create virtual environment and install dependencies
+RUN uv sync --dev
 
 # Default command for development
 CMD ["tail", "-f", "/dev/null"]
