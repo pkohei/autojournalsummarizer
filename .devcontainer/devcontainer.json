@@ -1,10 +1,7 @@
 {
   "name": "AutoJournalSummarizer Dev Environment",
-  "build": {
-    "dockerfile": "Dockerfile",
-    "context": "..",
-    "target": "development"
-  },
+  "dockerComposeFile": "../docker-compose.yml",
+  "service": "dev",
   "features": {
     "ghcr.io/devcontainers/features/git:1": {},
     "ghcr.io/devcontainers/features/github-cli:1": {}
@@ -47,10 +44,7 @@
     }
   },
   "forwardPorts": [],
-  "postCreateCommand": "echo 'Development environment ready! Run: uv sync'",
+  "postCreateCommand": "sudo chown -R vscode:vscode /home/vscode/.claude && echo 'Development environment ready! Run: uv sync'",
   "remoteUser": "vscode",
-  "workspaceFolder": "/workspace",
-  "mounts": [
-    "source=${localWorkspaceFolder},target=/workspace,type=bind,consistency=cached"
-  ]
+  "workspaceFolder": "/workspace"
 }

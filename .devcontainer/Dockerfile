@@ -43,8 +43,9 @@ ENV UV_LINK_MODE=copy
 ENV UV_CACHE_DIR=/home/vscode/.cache/uv
 ENV UV_PYTHON_PREFERENCE=only-system
 
-# Create cache directory with proper permissions
-RUN mkdir -p /home/vscode/.cache/uv && chown -R vscode:vscode /home/vscode/.cache
+# Create cache directory and Claude Code directory with proper permissions
+RUN mkdir -p /home/vscode/.cache/uv /home/vscode/.claude && \
+    chown -R vscode:vscode /home/vscode/.cache /home/vscode/.claude
 
 # Set working directory
 WORKDIR /workspace

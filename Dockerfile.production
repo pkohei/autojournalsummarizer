@@ -42,10 +42,10 @@ WORKDIR /app
 # Copy virtual environment from deps stage
 COPY --from=deps --chown=appuser:appuser /app/.venv /app/.venv
 
-# Copy project source
+# Copy project source and README (required by pyproject.toml)
 COPY --chown=appuser:appuser src/ ./src/
 COPY --chown=appuser:appuser prompts/ ./prompts/
-COPY --chown=appuser:appuser pyproject.toml ./
+COPY --chown=appuser:appuser pyproject.toml README.md ./
 
 # Install project in non-editable mode
 RUN --mount=type=cache,target=/opt/uv-cache \
