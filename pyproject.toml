@@ -19,6 +19,7 @@ dependencies = [
     "pydrive2",
     "pypdf",
     "pydantic",
+    "python-dotenv>=1.1.0",
 ]
 
 [project.optional-dependencies]
