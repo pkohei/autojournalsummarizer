@@ -22,6 +22,7 @@ This project uses a modern Python development setup with:
 - **ruff**: Code linting and formatting
 - **mypy**: Type checking
 - **pytest**: Testing framework
+- **pre-commit**: Automated code quality checks
 
 ## Key Commands
 
@@ -65,6 +66,13 @@ uv run pytest
 
 # Run tests with coverage
 uv run pytest --cov=autojournalsummarizer --cov-report=html
+
+# Pre-commit hooks (automatically run on commit)
+uv run pre-commit run --all-files
+
+# Install pre-commit hooks (one-time setup)
+uv run pre-commit install
+uv run pre-commit install --hook-type pre-push
 ```
 
 ### Production
@@ -144,4 +152,5 @@ Development dependencies:
 - `ruff`: Linting and formatting
 - `mypy`: Type checking
 - `pytest`: Testing framework
+- `pre-commit`: Automated code quality hooks
 - `jupyterlab`: Interactive development

@@ -191,6 +191,7 @@ def summarize_paper(title: str, text: str, model: str) -> dict[str, str]:
     )
     return res.choices[0].message.parsed
 
+
 def make_message(paper: arxiv.Result, summary: dict[str, str]) -> str:
     message = (
         f"# [{summary.japanese_title}]({paper.links[0].href})\n"
@@ -302,12 +303,15 @@ class Paper(BaseModel):
     title: str
     reason: str
 
+
 class Papers(BaseModel):
     papers: list[Paper]
+
 
 class Keyword(BaseModel):
     keyword: str
     explanation: str
+
 
 class PaperSummary(BaseModel):
     japanese_title: str

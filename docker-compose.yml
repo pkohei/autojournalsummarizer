@@ -12,7 +12,7 @@ services:
     working_dir: /workspace
     command: tail -f /dev/null
     user: vscode
-    
+
   prod:
     build:
       context: .
@@ -26,6 +26,6 @@ services:
     command: python -m autojournalsummarizer.main
     user: appuser
     restart: unless-stopped
-    
+
 volumes:
   uv-cache:
