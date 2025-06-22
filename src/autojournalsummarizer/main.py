@@ -5,14 +5,14 @@ import re
 from datetime import datetime, timedelta, timezone
 from tempfile import TemporaryDirectory
 
-import arxiv
+import arxiv  # type: ignore
 import requests
 from openai import OpenAI
 from pydantic import BaseModel
-from pydrive2.auth import GoogleAuth
-from pydrive2.drive import GoogleDrive
+from pydrive2.auth import GoogleAuth  # type: ignore
+from pydrive2.drive import GoogleDrive  # type: ignore
 from pypdf import PdfReader
-from pyzotero.zotero import Zotero
+from pyzotero.zotero import Zotero  # type: ignore
 
 ARXIV_CATEGORY = "cs.LG"
 
@@ -28,11 +28,39 @@ GOOGLE_FOLDER_NAME = "papers"
 ZOTERO_COLLECTION_NAME = "daily"
 
 
+class Paper(BaseModel):
+    idx: int
+    title: str
+    reason: str
+
+
+class Papers(BaseModel):
+    papers: list[Paper]
+
+
+class Keyword(BaseModel):
+    keyword: str
+    explanation: str
+
+
+class PaperSummary(BaseModel):
+    japanese_title: str
+    summary: str
+    merit: str
+    method: str
+    valid: str
+    discussion: str
+    keywords: list[Keyword]
+
+
 def main(num_papers: int, model: str) -> None:
     last_published = get_last_published_datetime()
+    start_datetime = None
+    if last_published is not None:
+        start_datetime = last_published + timedelta(minutes=1)
     papers = retrieve_recent_arxiv_papers(
         category=ARXIV_CATEGORY,
-        start_datetime=last_published + timedelta(minutes=1),
+        start_datetime=start_datetime,
     )
     print("Updated papers:", len(papers))
     if len(papers) == 0:
@@ -91,14 +119,14 @@ def get_last_published_datetime() -> datetime | None:
     if not os.path.exists(LAST_DATE_FILE):
         with open(LAST_DATE_FILE, mode="w") as f:
             f.write("")
-        return
+        return None
     with open(LAST_DATE_FILE) as f:
         last_published = f.readline().rstrip("\n")
         print(last_published)
         if last_published == "":
-            return
-        last_published = datetime.fromisoformat(last_published)
-    return last_published
+            return None
+        last_published_dt = datetime.fromisoformat(last_published)
+    return last_published_dt
 
 
 def retrieve_recent_arxiv_papers(
@@ -108,13 +136,13 @@ def retrieve_recent_arxiv_papers(
     if start_datetime is None:
         query = f"cat:{category}"
     else:
-        start_datetime = start_datetime.strftime("%Y%m%d%H%M%S")
+        start_datetime_str = start_datetime.strftime("%Y%m%d%H%M%S")
         now = datetime.now(tz=timezone.utc).strftime("%Y%m%d%H%M%S")
-        query = f"cat:{category} AND submittedDate:[{start_datetime} TO {now}]"
+        query = f"cat:{category} AND submittedDate:[{start_datetime_str} TO {now}]"
 
     search = arxiv.Search(
         query=query,
-        max_results=300,
+        max_results=50,
         sort_by=arxiv.SortCriterion.SubmittedDate,
     )
 
@@ -142,7 +170,10 @@ def extract_interesting_papers(
 
     prompt = prompt.replace("{keywords}", keyword_sentence)
 
-    client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
+    api_key = os.environ.get("OPENAI_API_KEY")
+    if api_key is None:
+        raise ValueError("OPENAI_API_KEY environment variable not set")
+    client = OpenAI(api_key=api_key)
 
     titles_sentence = ""
     for idx, p in enumerate(papers):
@@ -156,6 +187,8 @@ def extract_interesting_papers(
     )
     response = completion.choices[0].message.parsed
     print(response)
+    if response is None:
+        return papers[:num_papers]
     target_idxs = [int(p.idx) for p in response.papers]
 
     interesting_papers = []
@@ -165,7 +198,7 @@ def extract_interesting_papers(
     return interesting_papers
 
 
-def extract_text_from_pdf(pdf_path: str):
+def extract_text_from_pdf(pdf_path: str) -> str:
     reader = PdfReader(pdf_path)
     text = ""
     for page in reader.pages:
@@ -173,11 +206,14 @@ def extract_text_from_pdf(pdf_path: str):
     return text
 
 
-def summarize_paper(title: str, text: str, model: str) -> dict[str, str]:
+def summarize_paper(title: str, text: str, model: str) -> PaperSummary | None:
     with open(SUMMARIZE_PROMPT_FILE) as f:
         summarize_prompt = f.read()
 
-    client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
+    api_key = os.environ.get("OPENAI_API_KEY")
+    if api_key is None:
+        raise ValueError("OPENAI_API_KEY environment variable not set")
+    client = OpenAI(api_key=api_key)
 
     res = client.beta.chat.completions.parse(
         model=model,
@@ -192,7 +228,10 @@ def summarize_paper(title: str, text: str, model: str) -> dict[str, str]:
     return res.choices[0].message.parsed
 
 
-def make_message(paper: arxiv.Result, summary: dict[str, str]) -> str:
+def make_message(paper: arxiv.Result, summary: PaperSummary | None) -> str:
+    if summary is None:
+        return f"# [{paper.title}]({paper.links[0].href})\n論文の要約に失敗しました。"
+
     message = (
         f"# [{summary.japanese_title}]({paper.links[0].href})\n"
         f"第一著者：{paper.authors[0].name}\n"
@@ -216,6 +255,9 @@ def make_message(paper: arxiv.Result, summary: dict[str, str]) -> str:
 
 def send_discord(message: str) -> None:
     webhook_url = os.environ.get("DISCORD_WEBHOOK_URL")
+    if webhook_url is None:
+        print("DISCORD_WEBHOOK_URL not found, skipping Discord notification")
+        return
     headers = {"Content-Type": "application/json"}
     data = {"content": message}
     requests.post(webhook_url, data=json.dumps(data), headers=headers)
@@ -242,10 +284,16 @@ def upload_google_drive(pdf_path: str) -> None:
 
 
 def register_zotero(paper: arxiv.Result, pdf_path: str) -> None:
+    library_id = os.environ.get("ZOTERO_LIBRARY_ID")
+    api_key = os.environ.get("ZOTERO_API_KEY")
+    if library_id is None or api_key is None:
+        print("ZOTERO credentials not found, skipping Zotero registration")
+        return
+
     zot = Zotero(
-        library_id=os.environ.get("ZOTERO_LIBRARY_ID"),
+        library_id=library_id,
         library_type="user",
-        api_key=os.environ.get("ZOTERO_API_KEY"),
+        api_key=api_key,
     )
 
     item = zot.item_template("preprint")
@@ -296,31 +344,6 @@ def update_log(published_datetime: datetime) -> None:
     with open(LAST_DATE_FILE, mode="w") as f:
         f.write(published_datetime.isoformat())
     print("Log is updated!:", published_datetime.isoformat())
-
-
-class Paper(BaseModel):
-    idx: int
-    title: str
-    reason: str
-
-
-class Papers(BaseModel):
-    papers: list[Paper]
-
-
-class Keyword(BaseModel):
-    keyword: str
-    explanation: str
-
-
-class PaperSummary(BaseModel):
-    japanese_title: str
-    summary: str
-    merit: str
-    method: str
-    valid: str
-    discussion: str
-    keywords: list[Keyword]
 
 
 if __name__ == "__main__":
