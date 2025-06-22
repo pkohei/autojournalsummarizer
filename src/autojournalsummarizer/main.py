@@ -2,12 +2,11 @@ import argparse
 import json
 import os
 import re
-import requests
 from datetime import datetime, timedelta, timezone
-from typing import Optional, Union
 from tempfile import TemporaryDirectory
 
 import arxiv
+import requests
 from openai import OpenAI
 from pydantic import BaseModel
 from pydrive2.auth import GoogleAuth
@@ -88,12 +87,12 @@ def test(num_papers: int, model: str) -> None:
         break
 
 
-def get_last_published_datetime() -> Union[datetime, None]:
+def get_last_published_datetime() -> datetime | None:
     if not os.path.exists(LAST_DATE_FILE):
         with open(LAST_DATE_FILE, mode="w") as f:
             f.write("")
         return
-    with open(LAST_DATE_FILE, mode="r") as f:
+    with open(LAST_DATE_FILE) as f:
         last_published = f.readline().rstrip("\n")
         print(last_published)
         if last_published == "":
@@ -104,7 +103,7 @@ def get_last_published_datetime() -> Union[datetime, None]:
 
 def retrieve_recent_arxiv_papers(
     category: str,
-    start_datetime: Optional[datetime] = None,
+    start_datetime: datetime | None = None,
 ) -> list[arxiv.Result]:
     if start_datetime is None:
         query = f"cat:{category}"
@@ -131,10 +130,10 @@ def extract_interesting_papers(
     if not (os.path.exists(KEYWORDS_FILE) and os.path.exists(FILTER_PROMPT_FILE)):
         return papers
 
-    with open(FILTER_PROMPT_FILE, mode="r") as f:
+    with open(FILTER_PROMPT_FILE) as f:
         prompt = f.read()
 
-    with open(KEYWORDS_FILE, mode="r") as f:
+    with open(KEYWORDS_FILE) as f:
         keywords = f.readlines()
 
     keyword_sentence = ""
@@ -175,7 +174,7 @@ def extract_text_from_pdf(pdf_path: str):
 
 
 def summarize_paper(title: str, text: str, model: str) -> dict[str, str]:
-    with open(SUMMARIZE_PROMPT_FILE, mode="r") as f:
+    with open(SUMMARIZE_PROMPT_FILE) as f:
         summarize_prompt = f.read()
 
     client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
@@ -191,6 +190,7 @@ def summarize_paper(title: str, text: str, model: str) -> dict[str, str]:
         response_format=PaperSummary,
     )
     return res.choices[0].message.parsed
+
 
 def make_message(paper: arxiv.Result, summary: dict[str, str]) -> str:
     message = (
@@ -303,12 +303,15 @@ class Paper(BaseModel):
     title: str
     reason: str
 
+
 class Papers(BaseModel):
     papers: list[Paper]
+
 
 class Keyword(BaseModel):
     keyword: str
     explanation: str
+
 
 class PaperSummary(BaseModel):
     japanese_title: str

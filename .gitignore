@@ -13,7 +13,7 @@ develop-eggs/
 dist/
 downloads/
 eggs/
-.eggs/
+.eggs
 lib/
 lib64/
 parts/
@@ -165,3 +165,4 @@ auth/*
 !auth/README.md
 settings/keywords.txt
 settings/last_date.txt
+.claude

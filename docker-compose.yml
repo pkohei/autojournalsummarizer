@@ -2,34 +2,32 @@ services:
   dev:
     build:
       context: .
-      dockerfile: ./docker/Dockerfile.dev
-      args:
-        UID: 1000
-        GID: 1000
-        USERNAME: app
-        GROUPNAME: app
+      dockerfile: .devcontainer/Dockerfile
+      target: development
     env_file:
       - .env
     volumes:
-      - ./:/home/app/project
-      - python-packages:/home/app/.local/share
-    working_dir: /home/app/project
-    command: tail -f > /dev/null
+      - ./:/workspace
+      - uv-cache:/home/vscode/.cache/uv
+      - claude-data:/home/vscode/.claude
+    working_dir: /workspace
+    command: tail -f /dev/null
+    user: vscode
+
   prod:
     build:
       context: .
-      dockerfile: ./docker/Dockerfile
-      args:
-        UID: 1000
-        GID: 1000
-        USERNAME: app
-        GROUPNAME: app
+      dockerfile: Dockerfile.production
     env_file:
       - .env
     volumes:
-      - ./auth:/home/app/project/auth
-      - ./settings:/home/app/project/settings
-    working_dir: /home/app/project
-    command: python main.py
+      - ./auth:/app/auth:ro
+      - ./settings:/app/settings:ro
+    working_dir: /app
+    command: python -m autojournalsummarizer.main
+    user: appuser
+    restart: unless-stopped
+
 volumes:
-  python-packages:
+  uv-cache:
+  claude-data:

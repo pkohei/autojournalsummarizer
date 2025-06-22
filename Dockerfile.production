@@ -1,0 +1,63 @@
+# Production-optimized multi-stage build
+# Stage 1: Use official uv image for maximum efficiency
+FROM ghcr.io/astral-sh/uv:python3.10-bookworm-slim as uv-base
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    locales \
+    libsndfile1 \
+    ca-certificates \
+    && localedef -f UTF-8 -i ja_JP ja_JP.UTF-8 \
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean
+
+# Set locale
+ENV LANG=ja_JP.UTF-8 LANGUAGE=ja_JP:ja LC_ALL=ja_JP.UTF-8 TZ=JST-9
+
+# Configure uv for production
+ENV UV_COMPILE_BYTECODE=1
+ENV UV_LINK_MODE=copy
+ENV UV_CACHE_DIR=/opt/uv-cache
+
+# Stage 2: Dependencies installation
+FROM uv-base as deps
+
+WORKDIR /app
+
+# Copy dependency files
+COPY pyproject.toml ./
+
+# Install dependencies only (no project)
+RUN --mount=type=cache,target=/opt/uv-cache \
+    uv sync --no-install-project --no-dev
+
+# Stage 3: Production runtime
+FROM uv-base as production
+
+# Create non-root user for security
+RUN groupadd -r appuser && useradd -r -g appuser appuser
+
+WORKDIR /app
+
+# Copy virtual environment from deps stage
+COPY --from=deps --chown=appuser:appuser /app/.venv /app/.venv
+
+# Copy project source and README (required by pyproject.toml)
+COPY --chown=appuser:appuser src/ ./src/
+COPY --chown=appuser:appuser prompts/ ./prompts/
+COPY --chown=appuser:appuser pyproject.toml README.md ./
+
+# Install project in non-editable mode
+RUN --mount=type=cache,target=/opt/uv-cache \
+    uv sync --no-dev --no-editable
+
+# Set environment variables
+ENV PATH="/app/.venv/bin:$PATH"
+ENV PYTHONUNBUFFERED=1
+ENV PYTHONDONTWRITEBYTECODE=1
+
+# Switch to non-root user
+USER appuser
+
+# Default command
+CMD ["python", "-m", "autojournalsummarizer.main"]
