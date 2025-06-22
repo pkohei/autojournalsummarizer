@@ -23,6 +23,7 @@ This project uses a modern Python development setup with:
 - **mypy**: Type checking
 - **pytest**: Testing framework
 - **pre-commit**: Automated code quality checks
+- **GitHub Actions**: Automated CI/CD workflows
 
 ## Key Commands
 
@@ -86,6 +87,20 @@ docker compose run --rm --build prod
 # Background execution
 docker compose up -d prod
 ```
+
+### CI/CD
+This project uses GitHub Actions for automated testing and code quality checks:
+
+- **CI Workflow** (`.github/workflows/ci.yml`): Runs on every push and PR
+  - Linting with ruff (check and format)
+  - Type checking with mypy
+  - Testing with pytest across Python 3.10, 3.11, and 3.12
+  - Code coverage reporting
+
+- **Pre-commit Workflow** (`.github/workflows/pre-commit.yml`): Validates code quality
+- **Test Workflow** (`.github/workflows/test.yml`): Focused testing with coverage
+
+All workflows use uv for fast dependency management and include caching for optimal performance.
 
 ## Architecture
 
