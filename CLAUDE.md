@@ -217,6 +217,11 @@ git branch -d feature/your-branch-name
 - **Documentation**: `docs/update-readme`
 - **Refactoring**: `refactor/improve-code-structure`
 
+## Development Principles
+
+- **Branch Management**:
+  - 作業開始時はmainブランチをpullし、その最新コミット上でブランチを切り、その新しいブランチ上で作業すること。
+
 ## Dependencies
 
 Main dependencies:
