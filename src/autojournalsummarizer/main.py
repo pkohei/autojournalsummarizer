@@ -6,43 +6,15 @@ from datetime import datetime, timedelta, timezone
 from tempfile import TemporaryDirectory
 
 import arxiv  # type: ignore
-import arxiv  # type: ignore
 import requests
 from openai import OpenAI
 from pydantic import BaseModel
-from pydrive2.auth import GoogleAuth  # type: ignore
-from pydrive2.drive import GoogleDrive  # type: ignore
 from pydrive2.auth import GoogleAuth  # type: ignore
 from pydrive2.drive import GoogleDrive  # type: ignore
 from pypdf import PdfReader
 from pyzotero.zotero import Zotero  # type: ignore
 
 from .config import Settings, get_settings
-
-
-class Paper(BaseModel):
-    idx: int
-    title: str
-    reason: str
-
-
-class Papers(BaseModel):
-    papers: list[Paper]
-
-
-class Keyword(BaseModel):
-    keyword: str
-    explanation: str
-
-
-class PaperSummary(BaseModel):
-    japanese_title: str
-    summary: str
-    merit: str
-    method: str
-    valid: str
-    discussion: str
-    keywords: list[Keyword]
 
 
 class Paper(BaseModel):
@@ -226,7 +198,6 @@ def extract_interesting_papers(
 
 
 def extract_text_from_pdf(pdf_path: str) -> str:
-def extract_text_from_pdf(pdf_path: str) -> str:
     reader = PdfReader(pdf_path)
     text = ""
     for page in reader.pages:
@@ -254,10 +225,6 @@ def summarize_paper(
     )
     return res.choices[0].message.parsed
 
-
-def make_message(paper: arxiv.Result, summary: PaperSummary | None) -> str:
-    if summary is None:
-        return f"# [{paper.title}]({paper.links[0].href})\n論文の要約に失敗しました。"
 
 def make_message(paper: arxiv.Result, summary: PaperSummary | None) -> str:
     if summary is None:
