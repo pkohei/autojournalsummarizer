@@ -2,6 +2,8 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+**IMPORTANT**: All content in this file should be written in English to maintain consistency and clarity.
+
 ## Project Overview
 
 AutoJournalSummarizer is a Python application that automatically summarizes the latest papers from arXiv and sends notifications to Discord. The system includes:
@@ -88,7 +90,8 @@ docker compose run --rm --build prod
 docker compose up -d prod
 ```
 
-### CI/CD
+## CI/CD
+
 This project uses GitHub Actions for automated testing and code quality checks:
 
 - **CI Workflow** (`.github/workflows/ci.yml`): Runs on every push and PR
@@ -214,16 +217,14 @@ git pull origin main
 git branch -d feature/your-branch-name
 ```
 
-### Branch Naming Conventions
-- **Features**: `feature/add-new-functionality`
-- **Bug fixes**: `fix/resolve-specific-issue`
-- **Documentation**: `docs/update-readme`
-- **Refactoring**: `refactor/improve-code-structure`
+### Branch Management
+- **Naming Conventions**:
+  - Features: `feature/add-new-functionality`
+  - Bug fixes: `fix/resolve-specific-issue`
+  - Documentation: `docs/update-readme`
+  - Refactoring: `refactor/improve-code-structure`
 
-## Development Principles
-
-- **Branch Management**:
-  - 作業開始時はmainブランチをpullし、その最新コミット上でブランチを切り、その新しいブランチ上で作業すること。
+- **Branch Creation**: Always start work by pulling the latest main branch and creating new branches from the latest commit on main
 
 ## Dependencies
 
