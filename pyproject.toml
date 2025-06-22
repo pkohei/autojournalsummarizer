@@ -20,6 +20,7 @@ dependencies = [
     "pypdf",
     "pydantic",
     "python-dotenv>=1.1.0",
+    "pydantic-settings>=2.10.0",
 ]
 
 [project.optional-dependencies]
