@@ -46,7 +46,7 @@ def retry_on_failure(max_retries: int = 3, delay: float = 1.0) -> Callable:
     """
 
     def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
-        def wrapper(*args, **kwargs) -> Any:
+        def wrapper(*args: Any, **kwargs: Any) -> Any:
             last_exception = None
 
             for attempt in range(max_retries + 1):
