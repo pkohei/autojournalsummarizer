@@ -185,6 +185,9 @@ git checkout -b fix/bug-description
    ```
 3. **Commit**: Use appropriate commit message conventions
    - Pre-commit hooks will automatically run
+   - **Pre-commit Hook Handling**: If pre-commit hooks fail and modify files:
+     - The commit will NOT be executed (no need to amend)
+     - Simply add the modified files and commit again: `git add . && git commit -m "your message"`
    - Ensure all hooks pass before pushing
 
 ### Creating Pull Requests
