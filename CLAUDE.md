@@ -2,6 +2,8 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+**IMPORTANT**: All content in this file should be written in English to maintain consistency and clarity.
+
 ## Project Overview
 
 AutoJournalSummarizer is a Python application that automatically summarizes the latest papers from arXiv and sends notifications to Discord. The system includes:
@@ -88,7 +90,8 @@ docker compose run --rm --build prod
 docker compose up -d prod
 ```
 
-### CI/CD
+## CI/CD
+
 This project uses GitHub Actions for automated testing and code quality checks:
 
 - **CI Workflow** (`.github/workflows/ci.yml`): Runs on every push and PR
@@ -185,6 +188,9 @@ git checkout -b fix/bug-description
    ```
 3. **Commit**: Use appropriate commit message conventions
    - Pre-commit hooks will automatically run
+   - **Pre-commit Hook Handling**: If pre-commit hooks fail and modify files:
+     - The commit will NOT be executed (no need to amend)
+     - Simply add the modified files and commit again: `git add . && git commit -m "your message"`
    - Ensure all hooks pass before pushing
 
 ### Creating Pull Requests
@@ -211,11 +217,14 @@ git pull origin main
 git branch -d feature/your-branch-name
 ```
 
-### Branch Naming Conventions
-- **Features**: `feature/add-new-functionality`
-- **Bug fixes**: `fix/resolve-specific-issue`
-- **Documentation**: `docs/update-readme`
-- **Refactoring**: `refactor/improve-code-structure`
+### Branch Management
+- **Naming Conventions**:
+  - Features: `feature/add-new-functionality`
+  - Bug fixes: `fix/resolve-specific-issue`
+  - Documentation: `docs/update-readme`
+  - Refactoring: `refactor/improve-code-structure`
+
+- **Branch Creation**: Always start work by pulling the latest main branch and creating new branches from the latest commit on main
 
 ## Dependencies
 

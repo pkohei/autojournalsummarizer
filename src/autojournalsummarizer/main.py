@@ -8,38 +8,13 @@ from tempfile import TemporaryDirectory
 import arxiv  # type: ignore
 import requests
 from openai import OpenAI
-from pydantic import BaseModel
 from pydrive2.auth import GoogleAuth  # type: ignore
 from pydrive2.drive import GoogleDrive  # type: ignore
 from pypdf import PdfReader
 from pyzotero.zotero import Zotero  # type: ignore
 
 from .config import Settings, get_settings
-
-
-class Paper(BaseModel):
-    idx: int
-    title: str
-    reason: str
-
-
-class Papers(BaseModel):
-    papers: list[Paper]
-
-
-class Keyword(BaseModel):
-    keyword: str
-    explanation: str
-
-
-class PaperSummary(BaseModel):
-    japanese_title: str
-    summary: str
-    merit: str
-    method: str
-    valid: str
-    discussion: str
-    keywords: list[Keyword]
+from .models import Papers, PaperSummary
 
 
 def main(num_papers: int, model: str) -> None:
