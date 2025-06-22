@@ -5,116 +5,144 @@ import re
 from datetime import datetime, timedelta, timezone
 from tempfile import TemporaryDirectory
 
-import arxiv
+import arxiv  # type: ignore
 import requests
 from openai import OpenAI
 from pydantic import BaseModel
-from pydrive2.auth import GoogleAuth
-from pydrive2.drive import GoogleDrive
+from pydrive2.auth import GoogleAuth  # type: ignore
+from pydrive2.drive import GoogleDrive  # type: ignore
 from pypdf import PdfReader
-from pyzotero.zotero import Zotero
+from pyzotero.zotero import Zotero  # type: ignore
 
-ARXIV_CATEGORY = "cs.LG"
+from .config import Settings, get_settings
 
-FILTER_PROMPT_FILE = "./prompts/filter_prompt.txt"
-LAST_DATE_FILE = "./settings/last_date.txt"
-KEYWORDS_FILE = "./settings/keywords.txt"
 
-SUMMARIZE_PROMPT_FILE = "./prompts/summarize_prompt.txt"
+class Paper(BaseModel):
+    idx: int
+    title: str
+    reason: str
 
-GOOGLE_AUTH_SETTING_FILE = "./settings/auth_settings.yaml"
-GOOGLE_FOLDER_NAME = "papers"
 
-ZOTERO_COLLECTION_NAME = "daily"
+class Papers(BaseModel):
+    papers: list[Paper]
+
+
+class Keyword(BaseModel):
+    keyword: str
+    explanation: str
+
+
+class PaperSummary(BaseModel):
+    japanese_title: str
+    summary: str
+    merit: str
+    method: str
+    valid: str
+    discussion: str
+    keywords: list[Keyword]
 
 
 def main(num_papers: int, model: str) -> None:
-    last_published = get_last_published_datetime()
+    settings = get_settings()
+    settings.ensure_directories()
+    settings.ensure_files()
+
+    last_published = get_last_published_datetime(settings)
+    start_datetime = None
+    if last_published is not None:
+        start_datetime = last_published + timedelta(minutes=1)
     papers = retrieve_recent_arxiv_papers(
-        category=ARXIV_CATEGORY,
-        start_datetime=last_published + timedelta(minutes=1),
+        settings,
+        start_datetime=start_datetime,
     )
     print("Updated papers:", len(papers))
     if len(papers) == 0:
         print("There are no updated papers.")
-        send_discord("本日の新着論文はありません。")
+        send_discord(settings, "本日の新着論文はありません。")
         return
 
-    interesting_papers = extract_interesting_papers(papers, num_papers, model)
+    interesting_papers = extract_interesting_papers(settings, papers, num_papers, model)
     interesting_titles = [p.title for p in interesting_papers]
     print("Interesting papers:", len(interesting_papers))
 
     send_discord(
+        settings,
         f"新着論文：{len(papers)}本\n"
-        + f"関心度の高い論文：{len(interesting_papers)}本"
+        + f"関心度の高い論文：{len(interesting_papers)}本",
     )
 
     for paper in papers:
         if paper.title not in interesting_titles:
-            update_log(paper.published)
+            update_log(settings, paper.published)
             continue
         with TemporaryDirectory() as dirpath:
             pdf_path = paper.download_pdf(dirpath=dirpath)
             text = extract_text_from_pdf(pdf_path)
-            summary = summarize_paper(paper.title, text, model)
+            summary = summarize_paper(settings, paper.title, text, model)
             message = make_message(paper=paper, summary=summary)
             print(message)
 
-            send_discord(message)
-            upload_google_drive(pdf_path)
-            register_zotero(paper, pdf_path)
-            update_log(paper.published)
+            send_discord(settings, message)
+            upload_google_drive(settings, pdf_path)
+            register_zotero(settings, paper, pdf_path)
+            update_log(settings, paper.published)
 
 
 def test(num_papers: int, model: str) -> None:
     print("Test mode")
-    papers = retrieve_recent_arxiv_papers(category=ARXIV_CATEGORY)
+    settings = get_settings()
+    settings.ensure_directories()
+    settings.ensure_files()
+
+    papers = retrieve_recent_arxiv_papers(settings)
     print("Updated papers:", len(papers))
     if len(papers) == 0:
         print("There are no updated papers.")
         return
 
-    interesting_papers = extract_interesting_papers(papers, num_papers, model)
+    interesting_papers = extract_interesting_papers(settings, papers, num_papers, model)
     print("Interesting papers:", len(interesting_papers))
 
     for paper in interesting_papers:
         with TemporaryDirectory() as dirpath:
             pdf_path = paper.download_pdf(dirpath=dirpath)
             text = extract_text_from_pdf(pdf_path)
-            summary = summarize_paper(paper.title, text, model)
+            summary = summarize_paper(settings, paper.title, text, model)
             message = make_message(paper=paper, summary=summary)
             print(message)
         break
 
 
-def get_last_published_datetime() -> datetime | None:
-    if not os.path.exists(LAST_DATE_FILE):
-        with open(LAST_DATE_FILE, mode="w") as f:
-            f.write("")
-        return
-    with open(LAST_DATE_FILE) as f:
-        last_published = f.readline().rstrip("\n")
-        print(last_published)
-        if last_published == "":
-            return
-        last_published = datetime.fromisoformat(last_published)
-    return last_published
+def get_last_published_datetime(settings: Settings) -> datetime | None:
+    last_date_file = settings.last_date_file
+    if not last_date_file.exists():
+        last_date_file.write_text("")
+        return None
+
+    last_published = last_date_file.read_text().strip()
+    print(last_published)
+    if last_published == "":
+        return None
+
+    last_published_dt = datetime.fromisoformat(last_published)
+    return last_published_dt
 
 
 def retrieve_recent_arxiv_papers(
-    category: str,
+    settings: Settings,
     start_datetime: datetime | None = None,
 ) -> list[arxiv.Result]:
+    category = settings.arxiv_category
     if start_datetime is None:
         query = f"cat:{category}"
     else:
-        start_datetime = start_datetime.strftime("%Y%m%d%H%M%S")
+        start_datetime_str = start_datetime.strftime("%Y%m%d%H%M%S")
         now = datetime.now(tz=timezone.utc).strftime("%Y%m%d%H%M%S")
-        query = f"cat:{category} AND submittedDate:[{start_datetime} TO {now}]"
+        query = f"cat:{category} AND submittedDate:[{start_datetime_str} TO {now}]"
 
     search = arxiv.Search(
         query=query,
-        max_results=300,
+        max_results=settings.arxiv_max_results,
         sort_by=arxiv.SortCriterion.SubmittedDate,
     )
 
@@ -125,24 +153,22 @@ def retrieve_recent_arxiv_papers(
 
 
 def extract_interesting_papers(
-    papers: list[arxiv.Result], num_papers: int, model: str
+    settings: Settings, papers: list[arxiv.Result], num_papers: int, model: str
 ) -> list[arxiv.Result]:
-    if not (os.path.exists(KEYWORDS_FILE) and os.path.exists(FILTER_PROMPT_FILE)):
+    if not (settings.keywords_file.exists() and settings.filter_prompt_file.exists()):
         return papers
 
-    with open(FILTER_PROMPT_FILE) as f:
-        prompt = f.read()
-
-    with open(KEYWORDS_FILE) as f:
-        keywords = f.readlines()
+    prompt = settings.filter_prompt_file.read_text()
+    keywords = settings.keywords_file.read_text().splitlines()
 
     keyword_sentence = ""
     for k in keywords:
-        keyword_sentence += "- " + k
+        keyword_sentence += "- " + k + "\n"
 
     prompt = prompt.replace("{keywords}", keyword_sentence)
 
-    client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
+    settings.validate_required_env_vars("filter")
+    client = OpenAI(api_key=settings.openai_api_key)
 
     titles_sentence = ""
     for idx, p in enumerate(papers):
@@ -156,6 +182,8 @@ def extract_interesting_papers(
     )
     response = completion.choices[0].message.parsed
     print(response)
+    if response is None:
+        return papers[:num_papers]
     target_idxs = [int(p.idx) for p in response.papers]
 
     interesting_papers = []
@@ -165,7 +193,7 @@ def extract_interesting_papers(
     return interesting_papers
 
 
-def extract_text_from_pdf(pdf_path: str):
+def extract_text_from_pdf(pdf_path: str) -> str:
     reader = PdfReader(pdf_path)
     text = ""
     for page in reader.pages:
@@ -173,11 +201,13 @@ def extract_text_from_pdf(pdf_path: str):
     return text
 
 
-def summarize_paper(title: str, text: str, model: str) -> dict[str, str]:
-    with open(SUMMARIZE_PROMPT_FILE) as f:
-        summarize_prompt = f.read()
+def summarize_paper(
+    settings: Settings, title: str, text: str, model: str
+) -> PaperSummary | None:
+    summarize_prompt = settings.summarize_prompt_file.read_text()
 
-    client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
+    settings.validate_required_env_vars("summarize")
+    client = OpenAI(api_key=settings.openai_api_key)
 
     res = client.beta.chat.completions.parse(
         model=model,
@@ -192,7 +222,10 @@ def summarize_paper(title: str, text: str, model: str) -> dict[str, str]:
     return res.choices[0].message.parsed
 
 
-def make_message(paper: arxiv.Result, summary: dict[str, str]) -> str:
+def make_message(paper: arxiv.Result, summary: PaperSummary | None) -> str:
+    if summary is None:
+        return f"# [{paper.title}]({paper.links[0].href})\n論文の要約に失敗しました。"
+
     message = (
         f"# [{summary.japanese_title}]({paper.links[0].href})\n"
         f"第一著者：{paper.authors[0].name}\n"
@@ -214,22 +247,26 @@ def make_message(paper: arxiv.Result, summary: dict[str, str]) -> str:
     return message
 
 
-def send_discord(message: str) -> None:
-    webhook_url = os.environ.get("DISCORD_WEBHOOK_URL")
+def send_discord(settings: Settings, message: str) -> None:
+    if not settings.discord_webhook_url:
+        print("DISCORD_WEBHOOK_URL not found, skipping Discord notification")
+        return
+
     headers = {"Content-Type": "application/json"}
     data = {"content": message}
-    requests.post(webhook_url, data=json.dumps(data), headers=headers)
+    requests.post(settings.discord_webhook_url, data=json.dumps(data), headers=headers)
     print("Send message")
     print("------------")
     print(message)
     print("------------")
 
 
-def upload_google_drive(pdf_path: str) -> None:
-    gauth = GoogleAuth(GOOGLE_AUTH_SETTING_FILE)
+def upload_google_drive(settings: Settings, pdf_path: str) -> None:
+    gauth = GoogleAuth(str(settings.google_auth_settings_file))
     gauth.ServiceAuth()
     drive = GoogleDrive(gauth)
-    folders = drive.ListFile({"q": f'title = "{GOOGLE_FOLDER_NAME}"'}).GetList()
+    query = f'title = "{settings.google_folder_name}"'
+    folders = drive.ListFile({"q": query}).GetList()
     file = drive.CreateFile(
         {
             "title": os.path.basename(pdf_path),
@@ -241,11 +278,15 @@ def upload_google_drive(pdf_path: str) -> None:
     print("Upload to google drive:", os.path.basename(pdf_path))
 
 
-def register_zotero(paper: arxiv.Result, pdf_path: str) -> None:
+def register_zotero(settings: Settings, paper: arxiv.Result, pdf_path: str) -> None:
+    if not settings.zotero_api_key or not settings.zotero_library_id:
+        print("ZOTERO credentials not found, skipping Zotero registration")
+        return
+
     zot = Zotero(
-        library_id=os.environ.get("ZOTERO_LIBRARY_ID"),
+        library_id=settings.zotero_library_id,
         library_type="user",
-        api_key=os.environ.get("ZOTERO_API_KEY"),
+        api_key=settings.zotero_api_key,
     )
 
     item = zot.item_template("preprint")
@@ -274,7 +315,7 @@ def register_zotero(paper: arxiv.Result, pdf_path: str) -> None:
 
     collections = zot.collections()
     for collection in collections:
-        if collection["data"]["name"] == ZOTERO_COLLECTION_NAME:
+        if collection["data"]["name"] == settings.zotero_collection_name:
             collection_id = collection["key"]
             break
     item["collections"] = [collection_id]
@@ -292,35 +333,9 @@ def register_zotero(paper: arxiv.Result, pdf_path: str) -> None:
     print("Register to Zotero:", paper.title)
 
 
-def update_log(published_datetime: datetime) -> None:
-    with open(LAST_DATE_FILE, mode="w") as f:
-        f.write(published_datetime.isoformat())
+def update_log(settings: Settings, published_datetime: datetime) -> None:
+    settings.last_date_file.write_text(published_datetime.isoformat())
     print("Log is updated!:", published_datetime.isoformat())
-
-
-class Paper(BaseModel):
-    idx: int
-    title: str
-    reason: str
-
-
-class Papers(BaseModel):
-    papers: list[Paper]
-
-
-class Keyword(BaseModel):
-    keyword: str
-    explanation: str
-
-
-class PaperSummary(BaseModel):
-    japanese_title: str
-    summary: str
-    merit: str
-    method: str
-    valid: str
-    discussion: str
-    keywords: list[Keyword]
 
 
 if __name__ == "__main__":

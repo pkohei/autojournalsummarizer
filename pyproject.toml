@@ -20,6 +20,7 @@ dependencies = [
     "pypdf",
     "pydantic",
     "python-dotenv>=1.1.0",
+    "pydantic-settings>=2.10.0",
 ]
 
 [project.optional-dependencies]
@@ -81,4 +82,5 @@ dev = [
     "pytest>=8.4.1",
     "pytest-cov>=6.2.1",
     "ruff>=0.12.0",
+    "types-requests>=2.32.4.20250611",
 ]
