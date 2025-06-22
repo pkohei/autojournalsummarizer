@@ -153,6 +153,70 @@ Required configuration files:
 3. `auth/client_secret.json`: Google service account credentials
 4. `settings/auth_settings.yaml`: Google Drive authentication settings
 
+## Development Workflow
+
+This project follows a feature branch workflow for all development:
+
+### Starting New Work
+```bash
+# Always start from main branch
+git checkout main
+git pull origin main
+
+# Create feature branch
+git checkout -b feature/descriptive-name
+# or
+git checkout -b fix/bug-description
+```
+
+### Development Process
+1. **Code Changes**: Make your modifications in the feature branch
+2. **Quality Checks**:
+   ```bash
+   # Format and lint
+   uv run ruff format
+   uv run ruff check --fix
+
+   # Type checking
+   uv run mypy src
+
+   # Run tests
+   uv run pytest
+   ```
+3. **Commit**: Use appropriate commit message conventions
+   - Pre-commit hooks will automatically run
+   - Ensure all hooks pass before pushing
+
+### Creating Pull Requests
+```bash
+# Push feature branch
+git push -u origin feature/your-branch-name
+
+# Create PR with GitHub CLI
+gh pr create --title "Descriptive title" --body "
+## Summary
+Brief description of changes
+
+## Test plan
+- [ ] Manual testing steps
+- [ ] Automated tests added/updated
+"
+```
+
+### After PR Merge
+```bash
+# Return to main and clean up
+git checkout main
+git pull origin main
+git branch -d feature/your-branch-name
+```
+
+### Branch Naming Conventions
+- **Features**: `feature/add-new-functionality`
+- **Bug fixes**: `fix/resolve-specific-issue`
+- **Documentation**: `docs/update-readme`
+- **Refactoring**: `refactor/improve-code-structure`
+
 ## Dependencies
 
 Main dependencies:
