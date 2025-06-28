@@ -26,8 +26,8 @@ RUN curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | d
     && apt-get install -y gh \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Node.js 18+ for Claude Code CLI
-RUN curl -fsSL https://deb.nodesource.com/setup_18.x | bash - \
+# Install Node.js for Claude Code CLI
+RUN curl -fsSL https://deb.nodesource.com/setup_lts.x | bash - \
     && apt-get install -y nodejs
 
 # Install Claude Code CLI
@@ -78,12 +78,12 @@ COPY --chown=vscode:vscode . ./
 
 # Install project in development mode with all dev dependencies
 RUN if [ -f "README.md" ]; then \
-        uv sync; \
+    uv sync; \
     else \
-        echo "README.md not found, skipping project installation"; \
-        touch README.md; \
-        uv sync; \
-        rm README.md; \
+    echo "README.md not found, skipping project installation"; \
+    touch README.md; \
+    uv sync; \
+    rm README.md; \
     fi && \
     chown -R vscode:vscode .venv uv.lock 2>/dev/null || true
 
