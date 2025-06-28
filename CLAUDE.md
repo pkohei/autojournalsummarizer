@@ -109,9 +109,6 @@ uv run pre-commit run --all-files
 - **ruff**: Code formatter and linter
 - **mypy**: Static type checker
 - **pre-commit**: Git hooks for code quality
-{%- if use_cuda %}
-- **CUDA {{ cuda_version }}**: GPU computing support
-{%- endif %}
 
 ## Development Guidelines
 
@@ -144,20 +141,27 @@ uv run pre-commit run --all-files
 - Use descriptive test names
 - Follow AAA pattern (Arrange, Act, Assert)
 
-{%- if use_cuda %}
 
-## CUDA/GPU Development
+## Gemini CLI Integration Guide
 
-This project is configured for GPU computing with CUDA {{ cuda_version }}.
+### Overview
 
-### GPU Information
+When a user instructs **"proceed while consulting with Gemini"** (or similar instructions), Claude should proceed with the task in collaboration with **Gemini CLI**. Responses obtained from Gemini should be presented as-is, with additional explanations from Claude to combine insights from both agents.
 
-```bash
-# Check GPU status
-nvidia-smi
+### Trigger Examples
+
+- "Proceed while consulting with Gemini"
+- "Let's work on this while talking with Gemini"
+
+### Command Execution
+
+```
+gemini --yolo -p "{instruction content}"
 ```
 
-{%- endif %}
+### Important Notes
+
+Gemini tends to actively execute file editing tasks unless specifically instructed otherwise. If you don't want Gemini to perform irreversible operations, you must clearly add "please do not perform any operations" to the instruction content.
 
 ## Troubleshooting
 
@@ -165,9 +169,6 @@ nvidia-smi
 
 1. **Dependency conflicts**: Run `uv lock --upgrade` to resolve
 2. **Import errors**: Ensure you're in the correct virtual environment
-{%- if use_cuda %}
-3. **CUDA version mismatch**: Check host CUDA version compatibility
-{%- endif %}
 
 ### Getting Help
 

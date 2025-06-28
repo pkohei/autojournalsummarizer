@@ -26,12 +26,15 @@ RUN curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | d
     && apt-get install -y gh \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Node.js for Claude Code CLI
+# Install Node.js
 RUN curl -fsSL https://deb.nodesource.com/setup_lts.x | bash - \
     && apt-get install -y nodejs
 
 # Install Claude Code CLI
 RUN npm install -g @anthropic-ai/claude-code
+
+# Install Gemini CLI
+RUN npm install -g @google/gemini-cli
 
 # Create a non-root user
 RUN useradd -m -s /bin/bash vscode && \
@@ -43,9 +46,9 @@ ENV UV_LINK_MODE=copy
 ENV UV_CACHE_DIR=/home/vscode/.cache/uv
 ENV UV_PYTHON_PREFERENCE=only-system
 
-# Create cache directory and Claude Code directory with proper permissions
-RUN mkdir -p /home/vscode/.cache/uv /home/vscode/.claude && \
-    chown -R vscode:vscode /home/vscode/.cache /home/vscode/.claude
+# Create cache directory, Claude Code directory and Gemini CLI directory with proper permissions
+RUN mkdir -p /home/vscode/.cache/uv /home/vscode/.claude /home/vscode/.gemini && \
+    chown -R vscode:vscode /home/vscode/.cache /home/vscode/.claude /home/vscode/.gemini
 
 # Set working directory
 WORKDIR /workspace

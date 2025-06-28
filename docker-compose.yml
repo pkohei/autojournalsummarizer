@@ -10,6 +10,7 @@ services:
       - ./:/workspace
       - uv-cache:/home/vscode/.cache/uv
       - claude-data:/home/vscode/.claude
+      - gemini-data:/home/vscode/.gemini
     working_dir: /workspace
     command: tail -f /dev/null
     user: vscode
@@ -31,3 +32,4 @@ services:
 volumes:
   uv-cache:
   claude-data:
+  gemini-data:
