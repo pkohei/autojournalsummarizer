@@ -16,229 +16,159 @@ AutoJournalSummarizer is a Python application that automatically summarizes the 
 
 ## Development Environment
 
-This project uses a modern Python development setup with:
+This project uses DevContainer for consistent development environment across machines.
 
-- **uv**: Fast Python package manager
-- **DevContainer**: VS Code containerized development
-- **Claude Code**: AI-assisted development
-- **ruff**: Code linting and formatting
-- **mypy**: Type checking
-- **pytest**: Testing framework
-- **pre-commit**: Automated code quality checks
-- **GitHub Actions**: Automated CI/CD workflows
+### Quick Start
 
-## Key Commands
+1. Open the project in VS Code
+2. Run "Dev Containers: Reopen in Container" from Command Palette
+3. Install dependencies: `uv sync`
+4. Start coding!
 
-### Development
+## Development Commands
+
+### Package Management
+
 ```bash
-# Start development environment
-docker compose up dev
-
-# Or use DevContainer in VS Code (recommended)
-# Command Palette -> "Dev Containers: Reopen in Container"
-
 # Install dependencies
 uv sync
 
-# Run the application (production mode)
-python -m autojournalsummarizer.main
+# Add new package
+uv add package-name
 
-# Run in test mode (processes papers without sending notifications)
-python -m autojournalsummarizer.main --test
+# Add development package
+uv add --dev package-name
 
-# Run with custom parameters
-python -m autojournalsummarizer.main --num_papers 10 --model gpt-4o-mini
-
-# Run single test
-uv run pytest tests/test_main.py::test_placeholder -v
+# Update dependencies
+uv lock --upgrade
 ```
 
+When installing dependencies, use `uv add` instead of editing pyproject.toml directly. pyproject.toml will be automatically updated.
+
+
+### Testing
+
+```bash
+# Run all tests
+uv run pytest
+
+# Run with coverage report
+uv run pytest --cov
+
+# Run specific test file
+uv run pytest tests/test_main.py
+```
+
+
 ### Code Quality
+
 ```bash
 # Format code
 uv run ruff format
 
 # Run linting
+uv run ruff check
+
+# Auto-fix linting errors
 uv run ruff check --fix
+```
 
-# Type checking
+
+### Type Checking
+
+```bash
+# Run type checking
 uv run mypy src
+```
 
-# Run tests
-uv run pytest
 
-# Run tests with coverage
-uv run pytest --cov=autojournalsummarizer --cov-report=html
+### Pre-commit Hooks
 
-# Pre-commit hooks (automatically run on commit)
-uv run pre-commit run --all-files
-
-# Install pre-commit hooks (one-time setup)
+```bash
+# Install pre-commit hooks
 uv run pre-commit install
-uv run pre-commit install --hook-type pre-push
+
+# Run hooks on all files
+uv run pre-commit run --all-files
 ```
 
-### Production
+## Project Architecture
+
+- **Source code**: `src/{{ project_name.replace('-', '_') }}/` - Main application code
+- **Tests**: `tests/` - Test files using pytest
+- **Configuration**: `pyproject.toml` - Project configuration and dependencies
+- **Dependencies**: `uv.lock` - Dependency lock file for reproducible builds
+- **Docker**: `.devcontainer/` - Development container configuration
+- **Production**: `Dockerfile.production` - Production-optimized Docker image
+
+### Key Technologies
+
+- **Python {{ python_version }}**: Programming language
+- **uv**: Fast Python package manager
+- **pytest**: Testing framework
+- **ruff**: Code formatter and linter
+- **mypy**: Static type checker
+- **pre-commit**: Git hooks for code quality
+{%- if use_cuda %}
+- **CUDA {{ cuda_version }}**: GPU computing support
+{%- endif %}
+
+## Development Guidelines
+
+### Development workflow
+
+**Follow this workflow for development unless otherwise specified by the user**
+
+1. Create and present a development plan before starting work
+2. Create a GitHub issue once the development plan is approved by the user
+3. Before starting development, checkout the default branch, run `git pull` to get the latest commits from remote repository, and create a new branch from that commit
+4. Start development on the branch created in step 3 according to the issue
+5. Make commits and pushes with appropriate granularity during development
+6. Create a PR after development is complete
+7. Address review feedback and make necessary modifications if reviews are received
+8. After PR is approved and merged, delete the branch, checkout the default branch, and run `git pull` to get the latest commits
+
+### Code Style
+
+- Use `ruff format` for code formatting
+- Follow ruff linting rules (`ruff check`)
+- Add type hints to all functions and methods
+- Run `mypy` before committing changes
+- Follow Python naming conventions (PEP 8)
+- Write docstrings for public functions and classes
+
+### Testing
+
+- Write tests for all new features
+- Maintain test coverage above 80%
+- Use descriptive test names
+- Follow AAA pattern (Arrange, Act, Assert)
+
+{%- if use_cuda %}
+
+## CUDA/GPU Development
+
+This project is configured for GPU computing with CUDA {{ cuda_version }}.
+
+### GPU Information
+
 ```bash
-# Build and run production container
-docker compose up --build prod
-
-# One-shot execution
-docker compose run --rm --build prod
-
-# Background execution
-docker compose up -d prod
+# Check GPU status
+nvidia-smi
 ```
 
-## CI/CD
+{%- endif %}
 
-This project uses GitHub Actions for automated testing and code quality checks:
+## Troubleshooting
 
-- **CI Workflow** (`.github/workflows/ci.yml`): Runs on every push and PR
-  - Linting with ruff (check and format)
-  - Type checking with mypy
-  - Testing with pytest across Python 3.10, 3.11, and 3.12
-  - Code coverage reporting
+### Common Issues
 
-- **Pre-commit Workflow** (`.github/workflows/pre-commit.yml`): Validates code quality
-- **Test Workflow** (`.github/workflows/test.yml`): Focused testing with coverage
+1. **Dependency conflicts**: Run `uv lock --upgrade` to resolve
+2. **Import errors**: Ensure you're in the correct virtual environment
+{%- if use_cuda %}
+3. **CUDA version mismatch**: Check host CUDA version compatibility
+{%- endif %}
 
-All workflows use uv for fast dependency management and include caching for optimal performance.
+### Getting Help
 
-## Architecture
-
-### Core Workflow
-The application follows a pipeline architecture:
-
-1. **Paper Retrieval**: Fetches recent papers from arXiv in the specified category (cs.LG)
-2. **Filtering**: Uses OpenAI structured outputs to filter papers based on user-defined keywords
-3. **Processing**: For each interesting paper:
-   - Downloads PDF
-   - Extracts text using pypdf
-   - Generates structured summary using GPT
-   - Sends Discord notification
-   - Uploads to Google Drive
-   - Registers in Zotero bibliography
-   - Updates last processed timestamp
-
-### Data Models (Pydantic)
-- `Paper`: Represents a filtered paper with index, title, and selection reason
-- `Papers`: Collection of filtered papers
-- `PaperSummary`: Structured summary with Japanese title, summary sections, and keywords
-- `Keyword`: Individual keyword with explanation
-
-### File-based State Management
-- `settings/last_date.txt`: Tracks last processed paper timestamp
-- `settings/keywords.txt`: User-defined research interests (one per line)
-- `prompts/filter_prompt.txt`: Template for paper filtering (uses {keywords} placeholder)
-- `prompts/summarize_prompt.txt`: Template for paper summarization
-
-### External Integrations
-- **OpenAI**: Uses structured outputs (`beta.chat.completions.parse`) for consistent JSON responses
-- **arXiv**: Searches by category and date range, downloads PDFs
-- **Discord**: Webhook-based notifications with rich markdown formatting
-- **Google Drive**: Service account authentication, uploads to "papers" folder
-- **Zotero**: Creates preprint items in "daily" collection with PDF attachments
-
-## Configuration
-
-Required configuration files:
-
-1. `.env` file with API keys:
-   ```
-   OPENAI_API_KEY=your-api-key
-   DISCORD_WEBHOOK_URL=your-webhook-url
-   ZOTERO_API_KEY=your-api-key
-   ZOTERO_LIBRARY_ID=your-library-id
-   ```
-
-2. `settings/keywords.txt`: Research keywords (one per line in Japanese)
-3. `auth/client_secret.json`: Google service account credentials
-4. `settings/auth_settings.yaml`: Google Drive authentication settings
-
-## Development Workflow
-
-This project follows a feature branch workflow for all development:
-
-### Starting New Work
-```bash
-# Always start from main branch
-git checkout main
-git pull origin main
-
-# Create feature branch
-git checkout -b feature/descriptive-name
-# or
-git checkout -b fix/bug-description
-```
-
-### Development Process
-1. **Code Changes**: Make your modifications in the feature branch
-2. **Quality Checks**:
-   ```bash
-   # Format and lint
-   uv run ruff format
-   uv run ruff check --fix
-
-   # Type checking
-   uv run mypy src
-
-   # Run tests
-   uv run pytest
-   ```
-3. **Commit**: Use appropriate commit message conventions
-   - Pre-commit hooks will automatically run
-   - **Pre-commit Hook Handling**: If pre-commit hooks fail and modify files:
-     - The commit will NOT be executed (no need to amend)
-     - Simply add the modified files and commit again: `git add . && git commit -m "your message"`
-   - Ensure all hooks pass before pushing
-
-### Creating Pull Requests
-```bash
-# Push feature branch
-git push -u origin feature/your-branch-name
-
-# Create PR with GitHub CLI
-gh pr create --title "Descriptive title" --body "
-## Summary
-Brief description of changes
-
-## Test plan
-- [ ] Manual testing steps
-- [ ] Automated tests added/updated
-"
-```
-
-### After PR Merge
-```bash
-# Return to main and clean up
-git checkout main
-git pull origin main
-git branch -d feature/your-branch-name
-```
-
-### Branch Management
-- **Naming Conventions**:
-  - Features: `feature/add-new-functionality`
-  - Bug fixes: `fix/resolve-specific-issue`
-  - Documentation: `docs/update-readme`
-  - Refactoring: `refactor/improve-code-structure`
-
-- **Branch Creation**: Always start work by pulling the latest main branch and creating new branches from the latest commit on main
-
-## Dependencies
-
-Main dependencies:
-- `openai`: GPT API integration with structured outputs
-- `arxiv`: arXiv paper access and PDF downloads
-- `pyzotero`: Zotero bibliography management
-- `pydrive2`: Google Drive uploads with service account auth
-- `pypdf`: PDF text extraction
-- `pydantic`: Data validation and structured outputs
-
-Development dependencies:
-- `ruff`: Linting and formatting
-- `mypy`: Type checking
-- `pytest`: Testing framework
-- `pre-commit`: Automated code quality hooks
-- `jupyterlab`: Interactive development
+- Review uv documentation: https://docs.astral.sh/uv/
